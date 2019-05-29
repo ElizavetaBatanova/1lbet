@@ -1,0 +1,158 @@
+# Класс: Square
+# Доска с квадратами, имеющими 2 состояния:
+# 1) раскрыт квадрат или нет
+# 2) является ли квадрат бомбой (значение 9) или не бомбой, количество касающихся бомб (от 0 до 8)
+#
+# Square.location - расположение квадрата на доске; является списком.
+# Переход от доски к текущему местоположению: location = square.location
+# Переход от текущего к доске: square = board[location]
+
+
+class Square(object):
+    location = (0, 0)
+    isUncovered = False
+    value = 0
+
+    def __init__(self, location):
+        self.location = location
+
+# Класс: MineSweeper
+# self.board: список квадратов; инициализируется в начале игры и постоянно обновляется
+# self.frontier: квадраты на границах текущего состояния
+# self.bomb_number: количество бомб на доске
+# self.bomb_value: значение квадрата с бомбой
+# self.covered_value: значение состояния, закрытое или нет
+# self.gameEnd: true, если
+# 1) squares uncovered = row*col-bomb_number
+# 2) обнаружена бомба
+
+
+class MineSweeper(object):
+    board = []
+    frontier = []
+
+    row_size = 0
+    column_size = 0
+
+    bomb_number = 0
+
+    bomb_value = 9
+    covered_value = 10
+
+    num_uncovered = 0
+    gameEnd = False
+
+    score = 0
+    gameWon = False
+
+    verbose = False
+
+    # Начинаем игру.
+    # Создаем доску, добавляем бомбы в зависимости от сложности.
+
+    def __init__(self, row=4, column=4, difficulty=1, verbose=False):
+        self.row_size = row
+        self.column_size = column
+
+        self.board = []
+        self.frontier = []
+
+        self.verbose = verbose
+
+        for row in range(row):
+            self.board.append([])
+            for col in range(column):
+                self.board[row].append(Square((row, col)))
+
+        if difficulty == 1:
+            if row * column < 10:
+                self.bomb_number = 2
+            elif row*column < 20:
+                self.bomb_number = 3
+            elif row * column < 30:
+                self.bomb_number = 5
+            else:
+                self.bomb_number = 10
+        elif difficulty == 2:
+            if row * column < 30:
+                self.bomb_number = 10
+            elif row * column < 100:
+                self.bomb_number = 15
+            else:
+                self.bomb_number = 20
+        else:
+            raise Exception("Your level input is wrong!")
+
+        self.insert_mines()
+
+        # Вектор текущего состояния:
+        # Если квадрат закрыт, то состояние self.covered_value.
+        # В противном случае квадрат раскрывается и используется значение квадрата.
+        # Важно! В векторе состояния нет self.bomb_value, так как все бомбы должны быть закрыты
+        # или игра должна закончиться.
+
+        def get_state(self):
+            state = []
+            for row in range(self.row_size):
+                for col in range(self.column_size):
+                    square = self.board[row][col]
+                    if square.isUncovered == False:
+                        state.append(self.covered_value)
+                    else:
+                        state.append(square.value)
+            return state
+
+        # Label текущего сотояния.
+        # Правильное действие - 1.
+        # А неправильное (капитан очевидность) - 0.
+
+        def get_label(self):
+            label = []
+            for row in range(self.row_size):
+                for col in range(self.column_size):
+                    square = self.board[row][col]
+                    if square in self.frontier:
+                        if square.value != self.bomb_value:
+                            label.append(1)
+                        else:
+                            label.append(0)
+                    else:
+                        label.append(0)
+
+            return label
+
+        # Отслеживание квадратов на границе облегчает создания label.
+        # Любой квадрат, не находящийся на границе, не должен быть допустимым.
+        # Квадрат находится на границе, если он все еще закрыт и примыкает к открытому.
+
+        def get_frontier(self):
+            return self.frontier
+
+        # Рекурсивная функция для обновления состояния.
+        # Открывает квадрат и обновляет границу self.frontier.
+        # Рекурсивный случай: раскрытый квадрат равен 0, а значит не касается бомб,
+        # можем рекурсивно раскрыть всех его соседей.
+
+        def update_board(self, square):
+            # Квадрат уже раскрыт. Возвращаемся.
+            if square.isUncovered == True:
+                return
+
+            # Раскрыт квадрат из границ, подчищаем за собой.
+            if square in self.frontier:
+                self.frontier.remove(square)
+
+            # Раскрываем текущую область
+            square.isUncovered = True
+            self.num_uncovered += 1
+
+            # Рекурсивный случай: раскрываем соседей.
+            if square.value == 0:
+                for neighbor in self.get_neighbors(square).values():
+                    self.update_board(neighbor)
+            # Обновляем self.frontier.
+            else:
+                for neighbor in self.get_neighbors(square).values():
+                    # Добавляем соседей, если они закрыты и еще не на границе.
+                    if neighbor.isUncovered == False and neighbor not in self.frontier:
+                        self.frontier.append(neighbor)
